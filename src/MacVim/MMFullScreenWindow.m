@@ -45,6 +45,27 @@ enum {
 };
 
 
+@interface OpaqueContentView : NSView
+@property(retain, nonatomic) NSColor* backgroundColor;
+@end
+
+@implementation OpaqueContentView
+
+- (void)dealloc {
+    self.backgroundColor = nil;
+    [super dealloc];
+}
+
+- (BOOL)isOpaque {
+    return YES;
+}
+
+- (void)drawRect:(NSRect)dirtyRect {
+    [_backgroundColor set];
+    NSRectFill(dirtyRect);
+}
+@end
+
 @interface MMFullScreenWindow (Private)
 - (BOOL)isOnPrimaryScreen;
 - (void)windowDidBecomeMain:(NSNotification *)notification;
@@ -77,6 +98,8 @@ enum {
       
     if (self == nil)
         return nil;
+
+    [self setContentView:[[OpaqueContentView alloc] initWithFrame:NSZeroRect]];
 
     target = [t retain];
     view = [v retain];
@@ -128,6 +151,10 @@ enum {
     [super dealloc];
 }
 
+- (void)setBackgroundColor:(NSColor *)backgroundColor {
+    [(OpaqueContentView*)[self contentView] setBackgroundColor:backgroundColor];
+}
+
 - (void)setOptions:(int)opt
 {
     options = opt;
@@ -172,8 +199,6 @@ enum {
     oldPosition = [view frame].origin;
 
     [view removeFromSuperviewWithoutNeedingDisplay];
-    if (floor(NSAppKitVersionNumber) >= NSAppKitVersionNumber10_12)
-        [[view textView] setCGLayerEnabled:YES];
     [[self contentView] addSubview:view];
     [self setInitialFirstResponder:[view textView]];
     
@@ -287,9 +312,6 @@ enum {
 
     [view setFrameOrigin:oldPosition];
     [self close];
-
-    if (floor(NSAppKitVersionNumber) >= NSAppKitVersionNumber10_12)
-        [[view textView] setCGLayerEnabled:NO];
 
     // Set the text view to initial first responder, otherwise the 'plus'
     // button on the tabline steals the first responder status.
