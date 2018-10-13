@@ -49,6 +49,7 @@ NSString *MMNativeFullScreenKey         = @"MMNativeFullScreen";
 NSString *MMUseMouseTimeKey             = @"MMUseMouseTime";
 NSString *MMFullScreenFadeTimeKey       = @"MMFullScreenFadeTime";
 NSString *MMUseCGLayerAlwaysKey         = @"MMUseCGLayerAlways";
+NSString *MMDrawToImageKey               = @"MMDrawToImage";
 
 
 

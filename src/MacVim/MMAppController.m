@@ -234,6 +234,7 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
         [NSNumber numberWithBool:YES],    MMNativeFullScreenKey,
         [NSNumber numberWithDouble:0.25], MMFullScreenFadeTimeKey,
         [NSNumber numberWithBool:NO],     MMUseCGLayerAlwaysKey,
+        [NSNumber numberWithBool:YES],    MMDrawToImageKey,
         [NSNumber numberWithBool:YES],    MMShareFindPboardKey,
         nil];
 
