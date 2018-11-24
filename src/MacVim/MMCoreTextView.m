@@ -168,7 +168,7 @@ defaultAdvanceForFont(NSFont *font)
     [drawData release];  drawData = nil;
     [fontCache release];  fontCache = nil;
 
-    [contentsImageRep release];  contentsImageRep = nil;
+    CGContextRelease(cgContext);  cgContext = nil;
 
     [helper setTextView:nil];
     [helper release];  helper = nil;
@@ -217,6 +217,7 @@ defaultAdvanceForFont(NSFont *font)
         [defaultForegroundColor release];
         defaultForegroundColor = fgColor ? [fgColor retain] : nil;
     }
+    [self setNeedsDisplay:YES];
 }
 
 - (NSColor *)defaultBackgroundColor
@@ -453,10 +454,12 @@ defaultAdvanceForFont(NSFont *font)
         drawPending = YES;
     }
     [super setFrameSize:newSize];
-    if (contentsImageRep || [[NSUserDefaults standardUserDefaults]
+    if (cgContext || [[NSUserDefaults standardUserDefaults]
                              boolForKey:MMDrawToImageKey]) {
-        [contentsImageRep release];
-        contentsImageRep = [[self bitmapImageRepForCachingDisplayInRect:self.bounds] retain];
+        CGContextRelease(cgContext);
+        NSRect backingRect = [self convertRectToBacking:self.bounds];
+        cgContext = CGBitmapContextCreate(NULL, NSWidth(backingRect), NSHeight(backingRect), 8, 0, self.window.colorSpace.CGColorSpace, kCGImageAlphaPremultipliedFirst|kCGBitmapByteOrder32Host);
+        CGContextScaleCTM(cgContext, self.window.backingScaleFactor, self.window.backingScaleFactor);
     }
 }
 
@@ -602,7 +605,7 @@ defaultAdvanceForFont(NSFont *font)
 
 - (BOOL)isOpaque
 {
-    return YES;
+    return defaultBackgroundColor.alphaComponent == 1;
 }
 
 - (BOOL)acceptsFirstResponder
@@ -615,23 +618,24 @@ defaultAdvanceForFont(NSFont *font)
     return NO;
 }
 
+- (BOOL)wantsUpdateLayer {
+    return cgContext != nil;
+}
+
+- (void)updateLayer {
+    CGImageRef contentsImage = CGBitmapContextCreateImage(cgContext);
+    self.layer.contents = (id)contentsImage;
+    CGImageRelease(contentsImage);
+}
+
 - (void)drawRect:(NSRect)rect
 {
     NSGraphicsContext *context = [NSGraphicsContext currentContext];
     [context setShouldAntialias:antialias];
 
-    if (contentsImageRep) {
-        const NSRect *rects;
-        NSInteger count;
-        [self getRectsBeingDrawn:&rects count:&count];
-        for (size_t i = 0; i < count; i++) {
-            [contentsImageRep drawInRect:rects[i]
-                                fromRect:rects[i]
-                               operation:NSCompositingOperationCopy
-                                fraction:1.0
-                          respectFlipped:YES
-                                   hints:nil];
-        }
+    if (cgContext) {
+        CGImageRef contentsImage = CGBitmapContextCreateImage(cgContext);
+        CGContextDrawImage(context.CGContext, self.bounds, contentsImage);
     } else if (cgLayerEnabled && drawData.count == 0) {
         // during a live resize, we will have around a stale layer until the
         // refresh messages travel back from the vim process. We push the old
@@ -674,9 +678,9 @@ defaultAdvanceForFont(NSFont *font)
 
 - (void)performBatchDrawWithData:(NSData *)data
 {
-    if (contentsImageRep) {
+    if (cgContext) {
         [NSGraphicsContext saveGraphicsState];
-        NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithBitmapImageRep:contentsImageRep];
+        NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithCGContext:cgContext flipped:self.flipped];
         [self batchDrawData:data];
         [NSGraphicsContext restoreGraphicsState];
     } else if (cgLayerEnabled && drawData.count == 0 && [self getCGContext]) {
@@ -699,7 +703,7 @@ defaultAdvanceForFont(NSFont *font)
 
 - (void)setCGLayerEnabled:(BOOL)enabled
 {
-    if (contentsImageRep)
+    if (cgContext)
         return;
 
     cgLayerEnabled = enabled;
@@ -743,13 +747,13 @@ defaultAdvanceForFont(NSFont *font)
 
 - (void)setNeedsDisplayCGLayerInRect:(CGRect)rect
 {
-    if (cgLayerEnabled || contentsImageRep)
+    if (cgLayerEnabled || cgContext)
        [self setNeedsDisplayInRect:rect];
 }
 
 - (void)setNeedsDisplayCGLayer:(BOOL)flag
 {
-    if (cgLayerEnabled || contentsImageRep)
+    if (cgLayerEnabled || cgContext)
        [self setNeedsDisplay:flag];
 }
 
@@ -1524,14 +1528,16 @@ recurseDraw(const unichar *chars, CGGlyph *glyphs, CGPoint *positions,
 
 - (void)scrollRect:(NSRect)rect lineCount:(int)count
 {
-    if (contentsImageRep) {
+    if (cgContext) {
+        NSRect fromRect = NSOffsetRect(self.bounds, 0, -count * cellSize.height);
         NSRect toRect = NSOffsetRect(rect, 0, -count * cellSize.height);
-        [contentsImageRep drawInRect:toRect
-                            fromRect:rect
-                           operation:NSCompositingOperationCopy
-                            fraction:1.0
-                      respectFlipped:NO
-                               hints:nil];
+        CGContextSaveGState(cgContext);
+        CGContextClipToRect(cgContext, toRect);
+        CGContextSetBlendMode(cgContext, kCGBlendModeCopy);
+        CGImageRef contentsImage = CGBitmapContextCreateImage(cgContext);
+        CGContextDrawImage(cgContext, fromRect, contentsImage);
+        CGImageRelease(contentsImage);
+        CGContextRestoreGState(cgContext);
         [self setNeedsDisplayCGLayerInRect:toRect];
     } else if (cgLayerEnabled) {
         CGContextRef context = [self getCGContext];

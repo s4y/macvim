@@ -187,7 +187,7 @@ enum {
 
 - (BOOL)isOpaque
 {
-    return YES;
+    return textView.defaultBackgroundColor.alphaComponent == 1;
 }
 
 - (void)drawRect:(NSRect)rect
@@ -492,6 +492,7 @@ enum {
 - (void)setDefaultColorsBackground:(NSColor *)back foreground:(NSColor *)fore
 {
     [textView setDefaultColorsBackground:back foreground:fore];
+    [self setNeedsDisplay:YES];
 }
 
 

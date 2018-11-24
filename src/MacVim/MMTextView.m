@@ -78,6 +78,7 @@
     // The characters in the text storage are in display order, so disable
     // bidirectional text processing (this call is 10.4 only).
     [[lm typesetter] setBidiProcessingEnabled:NO];
+    [lm setBackgroundLayoutEnabled:NO];
 
     [tc setWidthTracksTextView:NO];
     [tc setHeightTracksTextView:NO];
@@ -99,6 +100,8 @@
         [textStorage release];
         return nil;
     }
+    self.drawsBackground = NO;
+    self.wantsLayer = YES;
 
     helper = [[MMTextViewHelper alloc] init];
     [helper setTextView:self];
@@ -287,6 +290,9 @@
         [self setSelectedRange:NSMakeRange(off, 0)];
     }
 
+    [self.layoutManager ensureLayoutForTextContainer:self.textContainer];
+    [self setNeedsDisplay:YES];
+
     // NOTE: During resizing, Cocoa only sends draw messages before Vim's rows
     // and columns are changed (due to ipc delays). Force a redraw here.
     if ([self inLiveResize])
@@ -403,6 +409,7 @@
                         foreground:(NSColor *)fgColor
 {
     [self setBackgroundColor:bgColor];
+    [[self layer] setBackgroundColor:bgColor.CGColor];
     return [(MMTextStorage*)[self textStorage]
             setDefaultColorsBackground:bgColor foreground:fgColor];
 }
@@ -529,7 +536,7 @@
 
 - (BOOL)isOpaque
 {
-    return NO;
+    return ((MMTextStorage*)self.textStorage).defaultBackgroundColor.alphaComponent == 1;
 }
 
 - (void)drawRect:(NSRect)rect
