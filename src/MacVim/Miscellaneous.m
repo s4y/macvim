@@ -49,8 +49,6 @@ NSString *MMSuppressTerminationAlertKey   = @"MMSuppressTerminationAlert";
 NSString *MMNativeFullScreenKey           = @"MMNativeFullScreen";
 NSString *MMUseMouseTimeKey               = @"MMUseMouseTime";
 NSString *MMFullScreenFadeTimeKey         = @"MMFullScreenFadeTime";
-NSString *MMUseCGLayerAlwaysKey           = @"MMUseCGLayerAlways";
-NSString *MMBufferedDrawingKey            = @"MMBufferedDrawing";
 
 
 
@@ -317,15 +315,4 @@ shouldUseMojaveTabBarStyle()
     }
 #endif
     return false;
-}
-
-BOOL
-shouldUseBufferedDrawing()
-{
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_14
-    if (@available(macos 10.14, *)) {
-        return YES;
-    }
-#endif
-    return NO;
 }

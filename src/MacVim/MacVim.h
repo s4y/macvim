@@ -55,6 +55,7 @@
 # define NSAlertStyleInformational NSInformationalAlertStyle
 # define NSAlertStyleWarning NSWarningAlertStyle
 # define NSCompositingOperationSourceOver NSCompositeSourceOver
+# define NSCompositingOperationDifference NSCompositeDifference
 # define NSControlSizeRegular NSRegularControlSize
 # define NSEventModifierFlagCapsLock NSAlphaShiftKeyMask
 # define NSEventModifierFlagCommand NSCommandKeyMask
@@ -355,6 +356,7 @@ extern NSString *VimFindPboardType;
 
 
 @interface NSColor (MMExtras)
+@property(readonly) unsigned argbInt;
 + (NSColor *)colorWithRgbInt:(unsigned)rgb;
 + (NSColor *)colorWithArgbInt:(unsigned)argb;
 @end
