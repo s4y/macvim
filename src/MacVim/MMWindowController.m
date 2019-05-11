@@ -172,6 +172,7 @@
     // on whether the tabline separator is visible or not.
     NSView *contentView = [win contentView];
     [contentView setAutoresizesSubviews:YES];
+    contentView.wantsLayer = YES;
 
     vimView = [[MMVimView alloc] initWithFrame:[contentView frame]
                                  vimController:vimController];
@@ -672,6 +673,9 @@
     // Do it last so whatever resizing we have done above will take effect
     // immediate too instead of waiting till next frame.
     [vimView finishPlaceScrollbars];
+
+    if ([self.window respondsToSelector:@selector(_postWindowNeedsDisplayUnlessPostingDisabled)])
+        [self.window performSelector:@selector(_postWindowNeedsDisplayUnlessPostingDisabled)];
 }
 
 - (void)showTabBar:(BOOL)on
