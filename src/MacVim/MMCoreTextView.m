@@ -218,8 +218,6 @@ static void grid_free(Grid *grid) {
     if (!(self = [super initWithFrame:frame]))
         return nil;
     
-    self.wantsLayer = YES;
-    
     // NOTE!  It does not matter which font is set here, Vim will set its
     // own font on startup anyway.  Just set some bogus values.
     font = [[NSFont userFixedPitchFontOfSize:0] retain];
@@ -288,7 +286,7 @@ static void grid_free(Grid *grid) {
     if (defaultBackgroundColor != bgColor) {
         [defaultBackgroundColor release];
         defaultBackgroundColor = bgColor ? [bgColor retain] : nil;
-        self.layer.backgroundColor = bgColor.CGColor;
+        self.needsDisplay = YES;
     }
 
     // NOTE: The default foreground color isn't actually used for anything, but
@@ -671,7 +669,7 @@ static void grid_free(Grid *grid) {
 
 - (BOOL)isOpaque
 {
-    return NO;
+    return self.layer == nil || self.defaultBackgroundColor.alphaComponent == 1;
 }
 
 - (BOOL)acceptsFirstResponder
@@ -686,8 +684,6 @@ static void grid_free(Grid *grid) {
 
 - (void)setNeedsDisplayFromRow:(int)row column:(int)col toRow:(int)row2
                         column:(int)col2 {
-    if (self.needsDisplay)
-        return;
     [self setNeedsDisplayInRect:[self rectForRow:row column:col numRows:row2-row+1 numColumns:col2-col+1]];
 }
 
@@ -710,6 +706,8 @@ static void grid_free(Grid *grid) {
     const unsigned defaultBg = defaultBackgroundColor.argbInt;
     CGContextSetFillColor(ctx, COMPONENTS(defaultBg));
 
+    CGContextFillRect(ctx, rect);
+
     for (size_t r = 0; r < grid.rows; r++) {
         CGRect rowRect = [self rectForRow:r column:0 numRows:1 numColumns:grid.cols];
         CGRect rowClipRect = CGRectIntersection(rowRect, rect);
@@ -717,7 +715,6 @@ static void grid_free(Grid *grid) {
             continue;
         CGContextSaveGState(ctx);
         CGContextClipToRect(ctx, rowClipRect);
-        CGContextFillRect(ctx, rowClipRect);
         for (size_t c = 0; c < grid.cols; c++) {
             GridCell cell = *grid_cell(&grid, r, c);
             CGRect cellRect = {{rowRect.origin.x + cellSize.width * c, rowRect.origin.y}, cellSize};
